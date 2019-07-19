@@ -3,7 +3,6 @@ const request = require('request');
 var mongoClient = require('mongodb').MongoClient;
 var url = "mongodb://localhost:27017/";
 
-connectDB();
 var noticiainfo = {
     'titulo': '',
     'url': '',
@@ -14,31 +13,32 @@ var noticiainfo = {
     'tipo': '',
 }
 
-function connectDB() {
+exports.connectDB = function() {
     mongoClient.connect(url, function(err, db) { //here db is the client obj
         if (err) throw err;
         var dbase = db.db("noticias"); //here
-        dbase.createCollection("noticia", function(err, res) {
+        dbase.createCollection("prueba", function(err, res) {
             if (err) throw err;
             console.log("se hace conexion!");
             //db.close(); //close method has also been moved to client obj
         });
-        const collection = dbase.collection('noticia');
-
-        getInfotecnologhy(collection);
-        //  getInfonational(db);
-        // getSports(db);
-        // getCultura(db);
+        const collection = dbase.collection('prueba');
+        insertInfo(collection)
     });
-
 }
 
-function getInfotecnologhy(collection) {
-    request('https://elpais.com/tag/paginas_web/a', (err, res, body) => {
+function insertInfo(collection) {
+    loadnews(collection, 'https://elpais.com/tag/paginas_web/a', "Tecnologia");
+    loadnews(collection, 'https://elpais.com/tag/c/da8b5f0ef13205be8acb0b78d7f2a1cf', "Nacionales");
+    loadnews(collection, 'https://elpais.com/tag/c/8a04e14f346d7e93abdc29d951c9484a', "Deportes");
+    loadnews(collection, 'https://elpais.com/tag/c/8f62f3ef0c14424d458a36951d746a4b', "Cultura");
+}
+
+function loadnews(collection, url, tipo) {
+    request(url, (err, res, body) => {
         console.log("Entra a request");
-        var count = 0;
         if (!err && res.statusCode == 200) {
-            console.log("hace peticion");
+            console.log("comienza a recorrer pagina de tecnologia");
             let $ = cheerio.load(body);
             $('article', '.articulos__interior').each(function() {
                 noticiainfo.titulo = $(this).find('h2.articulo-titulo > a').text();
@@ -47,7 +47,7 @@ function getInfotecnologhy(collection) {
                 noticiainfo.autor = $(this).find('span', '.articulo-metadatos ').text();
                 noticiainfo.fecha = $(this).find('time', '.articulo-metadatos').attr('datetime');
                 noticiainfo.descripcion = $(this).find('p', '.articulo-entradilla > a').text().replace("\n", " ");;
-                noticiainfo.tipo = "Tecnologia";
+                noticiainfo.tipo = tipo;
                 collection.insertOne(noticiainfo);
                 noticiainfo = new Object;
             });
@@ -55,59 +55,31 @@ function getInfotecnologhy(collection) {
     });
 }
 
-function getInfonational(db) {
-    request('https://elpais.com/tag/c/da8b5f0ef13205be8acb0b78d7f2a1cf', (err, res, body) => {
-        console.log("Entra a request");
-        if (!err && res.statusCode == 200) {
-            console.log("hace peticion");
-            let $ = cheerio.load(body);
-            $('article', '.articulos__interior').each(function() {
-                noticiainfo.titulo = $(this).find('h2.articulo-titulo > a').text();
-                noticiainfo.url = $(this).find('h2.articulo-titulo > a').attr('href');
-                noticiainfo.img = $(this).find('img', '.foto-imagen').attr('src');
-                noticiainfo.autor = $(this).find('span', '.articulo-metadatos ').text();
-                noticiainfo.fecha = $(this).find('time', '.articulo-metadatos').attr('datetime');
-                noticiainfo.descripcion = $(this).find('p', '.articulo-entradilla > a').text();
-                noticiainfo.tipo = "Nacionales";
-            });
-        }
-    });
+exports.selectNews = function(req, res) {
+    console.log(req.params.tipo);
+    getConsulta({ "tipo": req.params.tipo }, (documentos) => {
+        res.send(documentos);
+    })
 }
 
-function getSports(db) {
-    request('https://elpais.com/tag/c/8a04e14f346d7e93abdc29d951c9484a', (err, res, body) => {
-        console.log("Entra a request");
-        if (!err && res.statusCode == 200) {
-            console.log("hace peticion");
-            let $ = cheerio.load(body);
-            $('article', '.articulos__interior').each(function() {
-                noticiainfo.titulo = $(this).find('h2.articulo-titulo > a').text();
-                noticiainfo.url = $(this).find('h2.articulo-titulo > a').attr('href');
-                noticiainfo.img = $(this).find('img', '.foto-imagen').attr('src');
-                noticiainfo.autor = $(this).find('span', '.articulo-metadatos ').text();
-                noticiainfo.fecha = $(this).find('time', '.articulo-metadatos').attr('datetime');
-                noticiainfo.descripcion = $(this).find('p', '.articulo-entradilla > a').text();
-                noticiainfo.tipo = "Deportes";
-            });
-        }
+function getConsulta(query, callback) {
+    // Create a new MongoClient
+    mongoClient.connect(url, function(err, db) { //here db is the client obj
+        if (err) throw err;
+        var dbase = db.db("noticias"); //here
+        findDocuments(query, dbase, callback)
+            //   client.close();
     });
+
 }
 
-function getCultura(db) {
-    request('https://elpais.com/tag/c/8f62f3ef0c14424d458a36951d746a4b', (err, res, body) => {
-        console.log("Entra a request");
-        if (!err && res.statusCode == 200) {
-            console.log("hace peticion");
-            let $ = cheerio.load(body);
-            $('article', '.articulos__interior').each(function() {
-                noticiainfo.titulo = $(this).find('h2.articulo-titulo > a').text();
-                noticiainfo.url = $(this).find('h2.articulo-titulo > a').attr('href');
-                noticiainfo.img = $(this).find('img', '.foto-imagen').attr('src');
-                noticiainfo.autor = $(this).find('span', '.articulo-metadatos ').text();
-                noticiainfo.fecha = $(this).find('time', '.articulo-metadatos').attr('datetime');
-                noticiainfo.descripcion = $(this).find('p', '.articulo-entradilla > a').text();
-                noticiainfo.tipo = "Cultura";
-            });
-        }
+const findDocuments = function(query, db, callback) {
+    // Get the documents collection
+    const collection = db.collection('noticia');
+    // Find some documents
+    collection.find(query).toArray(function(err, docs) {
+        console.log("Found the following records");
+        console.log(docs.length)
+        callback(docs);
     });
 }
