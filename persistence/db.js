@@ -4,9 +4,7 @@ var mongoClient = require('mongodb').MongoClient;
 var url = "mongodb://localhost:27017/";
 
 connectDB();
-var all = [];
 var noticiainfo = {
-    '_id': "",
     'titulo': '',
     'url': '',
     'img': '',
@@ -20,12 +18,13 @@ function connectDB() {
     mongoClient.connect(url, function(err, db) { //here db is the client obj
         if (err) throw err;
         var dbase = db.db("noticias"); //here
-        // dbase.createCollection("noticia", function(err, res) {
-        //    if (err) throw err;
-        console.log("se hace conexion!");
-        //db.close(); //close method has also been moved to client obj
-        //});
+        dbase.createCollection("noticia", function(err, res) {
+            if (err) throw err;
+            console.log("se hace conexion!");
+            //db.close(); //close method has also been moved to client obj
+        });
         const collection = dbase.collection('noticia');
+
         getInfotecnologhy(collection);
         //  getInfonational(db);
         // getSports(db);
@@ -37,29 +36,24 @@ function connectDB() {
 function getInfotecnologhy(collection) {
     request('https://elpais.com/tag/paginas_web/a', (err, res, body) => {
         console.log("Entra a request");
+        var count = 0;
         if (!err && res.statusCode == 200) {
             console.log("hace peticion");
             let $ = cheerio.load(body);
             $('article', '.articulos__interior').each(function() {
-                // noticiainfo._id = new ObjectID()
                 noticiainfo.titulo = $(this).find('h2.articulo-titulo > a').text();
                 noticiainfo.url = $(this).find('h2.articulo-titulo > a').attr('href');
                 noticiainfo.img = $(this).find('img', '.foto-imagen').attr('src');
                 noticiainfo.autor = $(this).find('span', '.articulo-metadatos ').text();
                 noticiainfo.fecha = $(this).find('time', '.articulo-metadatos').attr('datetime');
-                noticiainfo.descripcion = $(this).find('p', '.articulo-entradilla > a').text();
+                noticiainfo.descripcion = $(this).find('p', '.articulo-entradilla > a').text().replace("\n", " ");;
                 noticiainfo.tipo = "Tecnologia";
-                // const c = db.collection("noticiainfo");
-                collection.insert(noticiainfo);
-                //all.push(noticiainfo);
+                collection.insertOne(noticiainfo);
+                noticiainfo = new Object;
             });
-            console.log(all);
-            collection.insertMany(all);
         }
     });
 }
-
-
 
 function getInfonational(db) {
     request('https://elpais.com/tag/c/da8b5f0ef13205be8acb0b78d7f2a1cf', (err, res, body) => {
