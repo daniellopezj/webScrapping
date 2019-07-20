@@ -1,13 +1,11 @@
 const cheerio = require('cheerio');
-const request = require('request');
+const request = require('request-promise');
 var mongoClient = require('mongodb').MongoClient;
 var url = "mongodb://localhost:27017/";
-
 var noticiainfo = {
     'titulo': '',
     'url': '',
     'img': '',
-    'autor': '',
     'fecha': '',
     'descripcion': '',
     'tipo': '',
@@ -17,7 +15,7 @@ exports.connectDB = function() {
     mongoClient.connect(url, function(err, db) { //here db is the client obj
         if (err) throw err;
         var dbase = db.db("noticias"); //here
-        dbase.createCollection("prueba", function(err, res) {
+        dbase.createCollection("noticia", function(err, res) {
             if (err) throw err;
             console.log("se hace conexion!");
             //db.close(); //close method has also been moved to client obj
@@ -28,27 +26,34 @@ exports.connectDB = function() {
 }
 
 function insertInfo(collection) {
-    loadnews(collection, 'https://elpais.com/tag/paginas_web/a', "Tecnologia");
-    loadnews(collection, 'https://elpais.com/tag/c/da8b5f0ef13205be8acb0b78d7f2a1cf', "Nacionales");
-    loadnews(collection, 'https://elpais.com/tag/c/8a04e14f346d7e93abdc29d951c9484a', "Deportes");
-    loadnews(collection, 'https://elpais.com/tag/c/8f62f3ef0c14424d458a36951d746a4b', "Cultura");
+    loadnews(collection, 'https://www.npr.org/sections/national/', "national");
+    loadnews(collection, 'https://www.npr.org/sections/world/', "world");
+    loadnews(collection, 'https://www.npr.org/sections/business/', "business");
+    loadnews(collection, 'https://www.npr.org/sections/investigations/', "investigations");
+    loadnews(collection, 'https://www.npr.org/sections/technology/', "technology");
 }
 
 function loadnews(collection, url, tipo) {
+
     request(url, (err, res, body) => {
         console.log("Entra a request");
+        var count = 1;
         if (!err && res.statusCode == 200) {
             console.log("comienza a recorrer pagina de tecnologia");
             let $ = cheerio.load(body);
-            $('article', '.articulos__interior').each(function() {
-                noticiainfo.titulo = $(this).find('h2.articulo-titulo > a').text();
-                noticiainfo.url = $(this).find('h2.articulo-titulo > a').attr('href');
-                noticiainfo.img = $(this).find('img', '.foto-imagen').attr('src');
-                noticiainfo.autor = $(this).find('span', '.articulo-metadatos ').text();
-                noticiainfo.fecha = $(this).find('time', '.articulo-metadatos').attr('datetime');
-                noticiainfo.descripcion = $(this).find('p', '.articulo-entradilla > a').text().replace("\n", " ");;
+            $('article', '.list-overflow').each(function() {
+                noticiainfo.titulo = $(this).find('h2', 'item-info').text();
+                noticiainfo.url = $(this).find('a', 'item-info').attr('href');
+                noticiainfo.img = $(this).find('img', '.item').attr("src");
+                noticiainfo.fecha = $(this).find('time', '.item-info').attr('datetime');
+                noticiainfo.descripcion = $(this).find('p', '.item-info > a').text().replace("\n", " ");;
                 noticiainfo.tipo = tipo;
-                collection.insertOne(noticiainfo);
+                if (noticiainfo.img == undefined) {
+                    noticiainfo.img = 'https://www.comercturro.com/tiendaonline/documentos/productos/.nofoto.jpg'
+                }
+                if (noticiainfo.titulo != '') {
+                    collection.insertOne(noticiainfo);
+                }
                 noticiainfo = new Object;
             });
         }
