@@ -16,7 +16,7 @@
         "mongodb": "^3.2.7",
         "morgan": "~1.9.1",
         "nodemon": "1.19.1",
-        "pug": "2.0.0-beta11",
+        "pug": "3.0.1",
         "request": "^2.88.0",
         "request-promise": "^4.2.4"
     }
